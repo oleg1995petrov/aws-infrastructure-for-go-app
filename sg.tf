@@ -42,7 +42,7 @@ resource "aws_security_group" "isg" {
   }
 }
 
-resource "aws_security_group" "ecssg" {
+/* resource "aws_security_group" "ecssg" {
   vpc_id = aws_vpc.vpc.id
   tags   = local.tags.ecssg
 
@@ -73,4 +73,4 @@ resource "aws_security_group" "ecssg" {
       self             = null
     }
   ]
-}
+} */
