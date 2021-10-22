@@ -1,4 +1,5 @@
 locals {
+  region = data.aws_region.region.name
   num_instances = var.num_zones * var.instances_per_zone
 }
 
