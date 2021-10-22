@@ -3,7 +3,7 @@ resource "aws_ecs_cluster" "ecs_cluster" {
   tags = local.tags.cluster
 }
 
-resource "aws_ecs_service" "service" {
+resource "aws_ecs_service" "ecs_service" {
   name                  = var.service_name
   cluster               = aws_ecs_cluster.ecs_cluster.id
   task_definition       = aws_ecs_task_definition.task_definition.arn

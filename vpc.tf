@@ -19,13 +19,13 @@ resource "aws_subnet" "public_sn" {
   tags                    = local.tags.public_sn
 }
 
-resource "aws_subnet" "private_sn" {
+/* resource "aws_subnet" "private_sn" {
   count             = var.num_zones
   vpc_id            = aws_vpc.vpc.id
   cidr_block        = "10.2.2${tostring(count.index)}.0/24"
   availability_zone = data.aws_availability_zones.az.names[count.index]
   tags              = local.tags.private_sn
-}
+} */
 
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.vpc.id
@@ -43,7 +43,8 @@ resource "aws_route_table_association" "public_rta" {
   route_table_id = aws_route_table.public_rt.id
 }
 
-resource "aws_route_table" "private_rt" {
+/* resource "aws_route_table" "private_rt" {
+  count          = var.num_zones
   vpc_id = aws_vpc.vpc.id
   tags   = local.tags.private_rt
 }
@@ -51,5 +52,5 @@ resource "aws_route_table" "private_rt" {
 resource "aws_route_table_association" "private_rta" {
   count          = var.num_zones
   subnet_id      = aws_subnet.private_sn[count.index].id
-  route_table_id = aws_route_table.private_rt.id
-}
+  route_table_id = aws_route_table.private_rt[count.index].id
+} */

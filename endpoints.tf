@@ -1,4 +1,4 @@
-resource "aws_vpc_endpoint" "ecs_endpoint" {
+/* resource "aws_vpc_endpoint" "ecs_endpoint" {
   vpc_id              = aws_vpc.vpc.id
   service_name        = "com.amazonaws.${local.region}.ecs"
   vpc_endpoint_type   = "Interface"
@@ -56,4 +56,4 @@ resource "aws_vpc_endpoint" "app_endpoint" {
   private_dns_enabled = true
   security_group_ids  = [aws_security_group.ecssg.id]
   tags   = local.tags.app_endpoint
-}
+} */

@@ -1,5 +1,5 @@
 resource "aws_lb" "lb" {
-  subnets         = aws_subnet.private_sn.*.id
+  subnets         = aws_subnet.public_sn.*.id
   security_groups = [aws_security_group.lbsg.id]
   tags            = local.tags.lb
 }
