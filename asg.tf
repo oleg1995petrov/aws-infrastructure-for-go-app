@@ -9,10 +9,14 @@ resource "aws_launch_configuration" "lc" {
       cluster_name = var.cluster_name
     }
   )
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_autoscaling_group" "asg" {
-  vpc_zone_identifier       = aws_subnet.public_sn.*.id
+  vpc_zone_identifier       = aws_subnet.private_sn.*.id
   launch_configuration      = aws_launch_configuration.lc.name
   health_check_grace_period = var.asg.health_check_grace_period
   desired_capacity          = var.asg.desired_capacity

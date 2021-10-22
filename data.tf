@@ -1,3 +1,5 @@
+data "aws_region" "region" {}
+
 data "aws_availability_zones" "az" {}
 
 data "aws_ami" "amazon_ecs_linux" {
