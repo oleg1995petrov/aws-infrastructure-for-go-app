@@ -13,7 +13,7 @@ resource "aws_internet_gateway" "ig" {
 resource "aws_subnet" "public_sn" {
   count                   = var.num_zones
   vpc_id                  = aws_vpc.vpc.id
-  cidr_block              = "10.1.1${tostring(count.index)}.0/24"
+  cidr_block              = "10.2.1${tostring(count.index)}.0/24"
   availability_zone       = data.aws_availability_zones.az.names[count.index]
   map_public_ip_on_launch = true
   tags                    = local.tags.public_sn
@@ -22,7 +22,7 @@ resource "aws_subnet" "public_sn" {
 resource "aws_subnet" "private_sn" {
   count             = var.num_zones
   vpc_id            = aws_vpc.vpc.id
-  cidr_block        = "10.1.2${tostring(count.index)}.0/24"
+  cidr_block        = "10.2.2${tostring(count.index)}.0/24"
   availability_zone = data.aws_availability_zones.az.names[count.index]
   tags              = local.tags.private_sn
 }
