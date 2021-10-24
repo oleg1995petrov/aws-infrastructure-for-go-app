@@ -1,19 +1,20 @@
 resource "aws_ecs_cluster" "ecs_cluster" {
-  name = var.cluster_name
-  tags = local.tags.cluster
+  name = var.ecs_cluster_name
+  tags = local.tags.ecs_cluster
 }
 
 resource "aws_ecs_service" "ecs_service" {
-  name                  = var.service_name
+  name                  = var.ecs_service_name
   cluster               = aws_ecs_cluster.ecs_cluster.id
   task_definition       = aws_ecs_task_definition.task_definition.arn
   desired_count         = var.num_zones
   wait_for_steady_state = true
-  tags                  = local.tags.service
+  tags                  = local.tags.ecs_service
 
   dynamic "ordered_placement_strategy" {
     for_each = var.ordered_placement_strategies
     iterator = i
+
     content {
       type  = i.value.type
       field = i.value.field

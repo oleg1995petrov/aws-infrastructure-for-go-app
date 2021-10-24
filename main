@@ -1,0 +1,280 @@
+terraform {
+  backend "s3" {
+    bucket = "ventz-devops"
+    key    = "exam/go/terraform.tfstate"
+  }
+
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+    }
+  }
+
+  required_version = ">= 0.14.9"
+}
+
+data "aws_availability_zones" "az" {}
+
+data "aws_ami" "amazon_ecs_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-ecs-hvm-2.0.*-x86_64-ebs"]
+  }
+
+  filter {
+    name   = "state"
+    values = ["available"]
+  }
+}
+
+data "aws_ecr_repository" "app_repo" {
+  name = var.container.repo_name
+}
+
+resource "aws_vpc" "vpc" {
+  cidr_block           = var.vpc.cidr_block
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+  tags                 = local.tags.vpc
+}
+
+resource "aws_internet_gateway" "ig" {
+  vpc_id = aws_vpc.vpc.id
+  tags   = local.tags.ig
+}
+
+resource "aws_subnet" "public_sn" {
+  count                   = var.num_zones
+  vpc_id                  = aws_vpc.vpc.id
+  cidr_block              = "10.2.1${tostring(count.index)}.0/24"
+  availability_zone       = data.aws_availability_zones.az.names[count.index]
+  map_public_ip_on_launch = true
+  tags                    = local.tags.public_sn
+  depends_on = [aws_internet_gateway.ig]
+}
+
+/* resource "aws_subnet" "private_sn" {
+  count             = var.num_zones
+  vpc_id            = aws_vpc.vpc.id
+  cidr_block        = "10.2.2${tostring(count.index)}.0/24"
+  availability_zone = data.aws_availability_zones.az.names[count.index]
+  tags              = local.tags.private_sn
+} */
+
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.vpc.id
+  tags   = local.tags.public_rt
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.ig.id
+  }
+}
+
+resource "aws_route_table_association" "public_rta" {
+  count          = var.num_zones
+  subnet_id      = aws_subnet.public_sn[count.index].id
+  route_table_id = aws_route_table.public_rt.id
+}
+
+/* resource "aws_route_table" "private_rt" {
+  vpc_id = aws_vpc.vpc.id
+  tags   = local.tags.private_rt
+}
+
+resource "aws_route_table_association" "private_rta" {
+  count          = var.num_zones
+  subnet_id      = aws_subnet.private_sn[count.index].id
+  route_table_id = aws_route_table.private_rt.id
+} */
+
+resource "aws_security_group" "lbsg" {
+  vpc_id = aws_vpc.vpc.id
+  tags   = local.tags.lbsg
+
+  dynamic "ingress" {
+    for_each = var.lbsg
+    content {
+      from_port   = ingress.value.from_port
+      to_port     = ingress.value.to_port
+      protocol    = ingress.value.protocol
+      cidr_blocks = ingress.value.cidr_blocks
+    }
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_security_group" "isg" {
+  vpc_id = aws_vpc.vpc.id
+  tags   = local.tags.isg
+
+  dynamic "ingress" {
+    for_each = var.isg
+    content {
+      from_port   = ingress.value.from_port
+      to_port     = ingress.value.to_port
+      protocol    = ingress.value.protocol
+      cidr_blocks = ingress.value.cidr_blocks
+    }
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_iam_role" "ec2_role" {
+  assume_role_policy = file("files/policies/ec2_role.json")
+}
+
+resource "aws_iam_role_policy" "ec2_role_policy" {
+  role   = aws_iam_role.ec2_role.id
+  policy = file("files/policies/ec2_role_policy.json")
+}
+
+resource "aws_iam_instance_profile" "ec2_role_profile" {
+  role = aws_iam_role.ec2_role.name
+  depends_on = [aws_iam_role_policy.ec2_role_policy]
+}
+
+resource "aws_lb" "lb" {
+  subnets         = aws_subnet.public_sn.*.id
+  security_groups = [aws_security_group.lbsg.id]
+  tags            = local.tags.lb
+}
+
+resource "aws_lb_target_group" "lbtg" {
+  vpc_id               = aws_vpc.vpc.id
+  port                 = var.lbtg.port
+  protocol             = var.lbtg.protocol
+  deregistration_delay = var.lbtg.deregistration_delay
+  tags                 = local.tags.lbtg
+
+  health_check {
+    interval = var.lbtg.health_check_interval
+    matcher  = var.lbtg.health_check_matcher
+  }
+}
+
+resource "aws_lb_listener" "lbl" {
+  load_balancer_arn = aws_lb.lb.arn
+  port              = var.lbl.port
+  tags              = local.tags.lbl
+
+  default_action {
+    type             = var.lbl.default_action_type
+    target_group_arn = aws_lb_target_group.lbtg.arn
+  }
+}
+
+resource "aws_launch_configuration" "lc" {
+  image_id             = data.aws_ami.amazon_ecs_linux.id
+  iam_instance_profile = aws_iam_instance_profile.ec2_role_profile.name
+  security_groups      = [aws_security_group.isg.id]
+  instance_type        = var.instance_type
+  user_data = templatefile(
+    "files/user_data/launch_configuration.tpl",
+    {
+      cluster_name = var.ecs_cluster_name
+    } 
+  )
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_autoscaling_group" "asg" {
+  vpc_zone_identifier       = aws_subnet.public_sn.*.id
+  launch_configuration      = aws_launch_configuration.lc.name
+  health_check_grace_period = var.asg.health_check_grace_period
+  desired_capacity          = var.asg.desired_capacity
+  min_size                  = var.asg.min_size
+  max_size                  = var.asg.max_size
+  health_check_type         = var.asg.health_check_type
+
+  /* lifecycle {
+    create_before_destroy = true
+  } */
+
+  depends_on = [aws_ecs_service.ecs_service]
+}
+
+resource "aws_ecs_cluster" "ecs_cluster" {
+  name = var.ecs_cluster_name
+  tags = local.tags.ecs_cluster
+}
+
+resource "aws_ecs_service" "ecs_service" {
+  name                  = var.ecs_service_name
+  cluster               = aws_ecs_cluster.ecs_cluster.id
+  task_definition       = aws_ecs_task_definition.task_definition.arn
+  desired_count         = var.num_zones
+  wait_for_steady_state = true
+  tags                  = local.tags.ecs_service
+
+  dynamic "ordered_placement_strategy" {
+    for_each = var.ordered_placement_strategies
+    iterator = i
+    content {
+      type  = i.value.type
+      field = i.value.field
+    }
+  }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.lbtg.arn
+    container_name   = var.container.name
+    container_port   = var.container.containerPort
+  }
+
+  /* lifecycle {
+    ignore_changes = [desired_count]
+  } */
+  
+  /* deployment_circuit_breaker {
+    enable = true
+    rollback = true
+  } */
+
+  depends_on = [aws_lb_listener.lbl]
+}
+
+resource "aws_ecs_task_definition" "task_definition" {
+  family = var.container.family
+  tags   = local.tags.td
+
+  container_definitions = jsonencode([
+    {
+      name      = var.container.name
+      image     = local.app_image
+      cpu       = var.container.cpu
+      memory    = var.container.memory
+      essential = var.container.essential
+      portMappings = [
+        {
+          containerPort = var.container.containerPort
+          hostPort      = var.container.hostPort
+        }
+      ]
+    }
+  ])
+}
+
+output "lb_dns" {
+  value = aws_lb.lb.dns_name
+}
+
+

@@ -13,7 +13,7 @@ variable "num_zones" {
 variable "common_tags" {
   default = {
     Owner       = "Aleh Ventskovich"
-    Project     = "Exam_GO"
+    Project     = "Go"
     Environment = "Dev"
   }
 }
@@ -78,16 +78,16 @@ variable "asg" {
     health_check_grace_period = 60
     desired_capacity          = 2
     min_size                  = 1
-    max_size                  = 3
+    max_size                  = 4
     health_check_type         = "ELB"
   }
 }
 
-variable "cluster_name" {
+variable "ecs_cluster_name" {
   default = "go"
 }
 
-variable "service_name" {
+variable "ecs_service_name" {
   default = "go"
 }
 
@@ -111,10 +111,15 @@ variable "container" {
     family        = "go"
     name          = "hello_go"
     repo_name     = "go"
-    cpu           = 512
-    memory        = 512
+    cpu           = 256
+    memory        = 256
     essential     = true
     containerPort = 8080
     hostPort      = 0
   }
+}
+
+variable "image_tag" {
+  type    = string
+  default = "latest"
 }
