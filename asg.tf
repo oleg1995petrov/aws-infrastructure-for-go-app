@@ -1,5 +1,5 @@
 resource "aws_launch_configuration" "lc" {
-  name_prefix          = local.name_prefixses.lc
+  name_prefix          = local.name_prefixes.lc
   image_id             = data.aws_ami.amazon_ecs_linux.id
   iam_instance_profile = aws_iam_instance_profile.ec2_role_profile.name
   security_groups      = [aws_security_group.isg.id]
@@ -17,7 +17,7 @@ resource "aws_launch_configuration" "lc" {
 }
 
 resource "aws_autoscaling_group" "asg" {
-  name_prefix               = local.name_prefixses.asg
+  name_prefix               = local.name_prefixes.asg
   vpc_zone_identifier       = aws_subnet.public_sn.*.id
   launch_configuration      = aws_launch_configuration.lc.name
   health_check_grace_period = var.asg.health_check_grace_period

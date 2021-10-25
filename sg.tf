@@ -1,5 +1,5 @@
 resource "aws_security_group" "lbsg" {
-  name_prefix = local.name_prefixses.lbsg
+  name_prefix = local.name_prefixes.lbsg
   vpc_id      = aws_vpc.vpc.id
   tags        = local.tags.lbsg
 
@@ -22,7 +22,7 @@ resource "aws_security_group" "lbsg" {
 }
 
 resource "aws_security_group" "isg" {
-  name_prefix = local.name_prefixses.isg
+  name_prefix = local.name_prefixes.isg
   vpc_id      = aws_vpc.vpc.id
   tags        = local.tags.isg
 

@@ -1,12 +1,12 @@
 resource "aws_lb" "lb" {
-  name_prefix     = local.name_prefixses.lb
+  name_prefix     = local.name_prefixes.lb
   subnets         = aws_subnet.public_sn.*.id
   security_groups = [aws_security_group.lbsg.id]
   tags            = local.tags.lb
 }
 
 resource "aws_lb_target_group" "lbtg" {
-  name_prefix          = local.name_prefixses.lbtg
+  name_prefix          = local.name_prefixes.lbtg
   vpc_id               = aws_vpc.vpc.id
   port                 = var.lbtg.port
   protocol             = var.lbtg.protocol
