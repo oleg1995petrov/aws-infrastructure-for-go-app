@@ -1,3 +1,3 @@
-# andersen-exam-go-infrastructure
+# AWS infrastructure
 
 ![aws_infrastructure](infrastructure.png)
