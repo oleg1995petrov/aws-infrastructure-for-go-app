@@ -26,8 +26,6 @@ resource "aws_ecs_service" "ecs_service" {
     container_name   = var.container.name
     container_port   = var.container.containerPort
   }
-
-  depends_on = [aws_lb_listener.lbl]
 }
 
 resource "aws_ecs_task_definition" "task_definition" {
